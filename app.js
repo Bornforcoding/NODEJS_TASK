@@ -1,4 +1,5 @@
 //jshint esversion:6
+//Callinh all the dependencies
 require('dotenv').config();
 const express = require("express");
 const bodyParser = require("body-parser");
@@ -30,21 +31,30 @@ app.use(passport.session());
 mongoose.connect("mongodb://localhost:27017/userDB", {useNewUrlParser: true});
 mongoose.set("useCreateIndex", true);
 
+//Defining Userscema
 const userSchema = new mongoose.Schema ({
   email: String,
   password: String,
   googleId: String,
-  secret: String
+  secret: String,
+  
 });
 
+//Defining userroles
+const userRoles = new mongoose.Schema({
+  role: String
+})
 userSchema.plugin(passportLocalMongoose);
 userSchema.plugin(findOrCreate);
 
 const User = new mongoose.model("User", userSchema);
+const UserRole=new mongoose.model("UserRole",userRoles);
 
 passport.use(User.createStrategy());
 
+//Only during the authentication to specify what user information should be stored in the session.
 passport.serializeUser(function(user, done) {
+  console.log("Serialize: ", user);
   done(null, user.id);
 });
 
@@ -57,7 +67,7 @@ passport.deserializeUser(function(id, done) {
 passport.use(new GoogleStrategy({
     clientID: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET,
-    callbackURL: "http://localhost:3000/auth/google/secrets",
+    callbackURL: "http://localhost:5000/auth/google/secrets",
     userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
   },
   function(accessToken, refreshToken, profile, cb) {
@@ -84,10 +94,12 @@ app.get("/auth/google/secrets",
     res.redirect("/secrets");
   });
 
+ //Routing for login page 
 app.get("/login", function(req, res){
   res.render("login");
 });
 
+//Requesting for register page
 app.get("/register", function(req, res){
   res.render("register");
 });
@@ -104,6 +116,7 @@ app.get("/secrets", function(req, res){
   });
 });
 
+//Get request fir submit page
 app.get("/submit", function(req, res){
   if (req.isAuthenticated()){
     res.render("submit");
@@ -112,11 +125,12 @@ app.get("/submit", function(req, res){
   }
 });
 
+//post request for submit page
 app.post("/submit", function(req, res){
   const submittedSecret = req.body.secret;
 
 //Once the user is authenticated and their session gets saved, their user details are saved to req.user.
-  // console.log(req.user.id);
+  console.log(req.user.id);
 
   User.findById(req.user.id, function(err, foundUser){
     if (err) {
@@ -152,6 +166,7 @@ app.post("/register", function(req, res){
 
 });
 
+//Post request for login page
 app.post("/login", function(req, res){
 
   const user = new User({
@@ -172,11 +187,7 @@ app.post("/login", function(req, res){
 });
 
 
-
-
-
-
-
-app.listen(3000, function() {
-  console.log("Server started on port 3000.");
+//Hosting the page on local server 5000 or in other assigned server
+app.listen(process.env.PORT || 5000, function() {
+  console.log("Server started on port 5000.");
 });
